@@ -1,0 +1,85 @@
+---
+title: "Regression_Cars"
+author: "Damian"
+date: "June 11, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(datasets)
+data(mtcars)
+```
+
+### does transmission type have an effect on mpg?  
+We will answer this question!
+
+### exploratory analysis
+```{r}
+ggplot(data = mtcars, aes(x = factor(am), y = mpg, color = am)) + geom_point()
+```
+
+Seems like cars with manual transmission have higher mpg
+
+```{r}
+auto_mean <- mean(mtcars$mpg[mtcars$am == 0])
+man_mean <- mean(mtcars$mpg[mtcars$am == 1])
+```
+
+Mean mpg by transmission type
+Automatic : $`r auto_mean`$
+Manual : $`r man_mean`$
+
+
+### Linear Models
+I fit three models
+* One predicting mpg only using transmission type
+* One predicting mpg only using weight
+* One predicting mpg using weight and transmission
+
+# transmission type alone
+```{r}
+model1 <- lm(data = mtcars, formula = mpg~am)
+summary(model1)
+```
+# transmission and weight
+```{r}
+model2 <- lm(data = mtcars, formula = mpg ~ am + wt)
+summary(model2)
+```
+
+# weight alone
+```{r}
+model3 <- lm(data = mtcars, formula = mpg ~ wt)
+summary(model3)
+```
+
+### What does it mean?
+```{r}
+p_am <- summary(model1)$coefficients[2,4]
+p_am_wt <- summary(model2)$coefficients[2,4]
+```
+Transmission type is a statistically significant predictor when used alone.
+The p-value : $`r p_am`$ can be interpreted as saying that there's a 2.8% chance of 
+observing a correlation of this magnitude if there was no relationship between mpg
+and transmission type.
+
+However, when weight is included in the model, transmission type is far from predictive, with p-value equal to $`r p_am_wt`$.
+
+
+### residual plot
+```{r}
+residual_df <- data.frame(row.names=names(model3$residuals), resid = model3$residuals)
+residual_df$AM <- mtcars$am
+ggplot(data = residual_df, aes(x=resid, fill = as.factor(AM))) + geom_histogram(binwidth=1.5)
+```
+
+### leverage
+```{r}
+plot(hat(model.matrix(model2)))
+```
+

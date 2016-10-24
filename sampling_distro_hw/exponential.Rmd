@@ -1,0 +1,76 @@
+---
+title: "Exponential Distro"
+author: "Darth_D_Dog"
+date: "June 2, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+title: the exponential distribution and the sampling distribution of its mean
+================================================================================================
+
+### summary
+I am going to show you the exponential distribution  
+Then I will show you the sampling distribution of the mean for the exp distro
+
+### exponential distribution
+this is a histogram of 1000 random values from the exponential distribution with rate = 0.2
+```{r}
+hist(rexp(n=1000,rate = .2))
+```
+
+### sampling distibution of the mean 
+```{r}
+means <- NULL
+for(i in 1:1000){
+        the_mean <- mean(rexp(n=40, rate = .2))
+        means <- c(means, the_mean)
+}
+```
+this is a histogram the means of 1000 size 40 samples taken from the exponential distribution with rate = 0.2
+```{r}
+hist(means)
+```
+### mean
+```{r}
+sam_mean <- mean(means)
+```
+the theoretical mean of a sampling distribution of the mean is equal to the mean of the distribution from which the samples were drawn  
+the theoretical mean of an exponential distro is 1/rate  
+so the expected mean of our sampling distro is 1/.2, which equals 5  
+our observed mean of the sampling distro is `r sam_mean`
+
+
+### variance
+the theoretical variance of the exponential distribution is 1/rate = 1/.2 = 5  
+and for the sampling distribution...  
+the law of large numbers say that as sample size increases, the mean of the samples approaches the population mean  
+therefore the variance of the sampling distro decreases as sample size increases  
+to be exact, the theoretical variance of the sampling distribution of the mean equals:   
+(Population_Standard_Deviation / sqrt(Sample_Size)) ^ 2
+```{r}
+theo_var <- (5/sqrt(40))^2
+```
+in our case the theoretical variance of the sampling distro is `r theo_var`
+```{r}
+sam_var <- var(means)*(40/39)
+```
+the observed variance of our sampling distro was `r sam_var`
+
+### normality
+normal distributions follow the 68-95-99 rule  
+about 68% of values should fall within one standard deviation of the mean, etc.
+```{r}
+sam_sd <- sqrt(sam_var)
+one_sd <- mean(means > sam_mean - sam_sd & means < sam_mean + sam_sd)
+two_sd <- mean(means > sam_mean - 2*sam_sd & means < sam_mean + 2*sam_sd)
+three_sd <- mean(means > sam_mean - 3*sam_sd & means < sam_mean + 3*sam_sd)
+```
+in our case  
+1. `r one_sd*100`% of values fall within one standard deviation of the mean  
+2. `r two_sd*100`% of values fall within two standard deviations of the mean  
+3. `r three_sd*100`% of values fall within three standard deviations of the mean      
+so the sampling distro is approximately normal, as expected
