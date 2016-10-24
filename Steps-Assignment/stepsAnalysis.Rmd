@@ -1,0 +1,110 @@
+Steps Assignment
+========================================================
+
+## Part 0 : load some packages and get the raw data into a dataframe
+
+```{r}
+library(ggplot2)
+library(plyr)
+library(dplyr)
+
+download.file(url="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", 
+              destfile = "raw_steps_data.zip")
+
+unzip("raw_steps_data.zip",exdir = "steps_assignment")
+
+raw_steps_data <- read.csv("steps_assignment/activity.csv")
+```
+
+## Part 1 : Steps by Day
+
+### group by date and sum the steps
+```{r}
+steps_per_day <- group_by(raw_steps_data,date) %>% summarise(Steps = sum(steps,na.rm=TRUE)) 
+```
+
+### plot the histogram
+```{r}
+qplot(x=steps_per_day$Steps,binwidth=2000,ylab="frequency", xlab = "steps per day", main="absolute frequency of steps per day, bin size = 2000")
+```
+
+### get the mean and median for steps-per-day
+```{r}
+SpD_median <- median(steps_per_day$Steps,na.rm = TRUE)
+SpD_mean <- mean(steps_per_day$Steps,na.rm=TRUE)
+```
+The mean is `r SpD_mean`.
+The median is `r SpD_median`.
+
+## Part 2 : Steps by Time
+
+### group by time intervals and calculate the mean number of steps
+```{r}
+interval_steps <- group_by(raw_steps_data,interval) %>% 
+    summarize(mean_steps = mean(steps,na.rm =TRUE))
+```
+
+### plot a timeseries of average step-count
+```{r}
+qplot(data = interval_steps, x= interval, y = mean_steps, geom="line",main="step-count throughout the day")
+```
+
+### find most active interval
+```{r}
+most_active_steps <- max(interval_steps$mean_steps)
+most_active_interval <-            interval_steps[[match(most_active_steps,interval_steps$mean_steps),1]]
+```
+The most active 5 minute was at `r most_active_interval`
+
+## Part 3 : Impute missing data and remake steps per day histogram
+
+## impute missing data by replacing each NA with the average of its interval
+```{r}
+imputed_steps_data <- raw_steps_data
+for(entry in 1:nrow(imputed_steps_data)){
+    
+    if(is.na(imputed_steps_data[["steps"]][entry])){
+            the_interval <- imputed_steps_data[["interval"]][entry]
+            sub_value <- interval_steps[interval_steps$interval==the_interval,][["mean_steps"]]
+            imputed_steps_data[["steps"]][entry] <- sub_value            
+            
+    }
+}
+```
+
+## recalculate total steps for each day
+```{r}
+new_steps_per_day <- group_by(imputed_steps_data,date) %>% summarize(daily_steps = sum(steps))
+```
+
+## replot histogram
+```{r}
+qplot(x=new_steps_per_day$daily_steps,binwidth=2000,ylab="frequency", xlab = "steps per day",main="absolute frequency of steps per day, bin size = 2000")
+```
+
+## recalculate mean and median
+```{r}
+new_median <- median(new_steps_per_day$daily_steps)
+new_mean <- mean(new_steps_per_day$daily_steps)
+```
+The mean of imputed data is `r new_mean`, and the median is `r new_median`
+
+### Part 4 : plot time-series of the average weekday and weekend
+
+## convert the date variable into a factor with two levels: weekday and weekend
+```{r}
+imputed_steps_data <- mutate(imputed_steps_data, DOW = weekdays(as.Date(date)))
+imputed_steps_data <- mutate(imputed_steps_data, week_end_day = ifelse(DOW=="Saturday" | DOW == "Sunday", "Weekend","Weekday"))
+imputed_steps_data <- mutate(imputed_steps_data, week_end_day = factor(week_end_day))
+```
+
+## group by weekend vs. weekday plus time interval, get mean steps for each group
+```{r}
+group_day_int <- group_by(imputed_steps_data,week_end_day,interval) %>%
+                                        summarize(the_mean=mean(steps))
+```
+
+## plot time-series of steps for weekends and weekdays
+```{r}
+qplot(x=interval,y=the_mean,facets = .~week_end_day,geom="line",data=group_day_int)
+```
