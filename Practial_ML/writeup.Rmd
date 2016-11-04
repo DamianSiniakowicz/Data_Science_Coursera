@@ -1,0 +1,116 @@
+---
+title: "exercise_quality"
+author: "Damian"
+date: "September 4, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Get Data
+
+* downloaded the data
+* read it into R
+* removed the first 7 predictors (they seemed irrelvant)
+
+```{r}
+if(!file.exists("~/training_data.csv")){
+download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "~/training_data.csv")
+}
+
+train_data <- read.csv("~/training_data.csv")
+
+train_data <- train_data[,8:length(names(train_data))]
+
+if(!file.exists("~/testing_data.csv")){
+download.file(url = "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile = "~/testing_data.csv")
+}
+
+test_data <- read.csv("~/testing_data.csv")
+
+test_data <- test_data[,8:length(names(test_data))]
+```
+
+## Clean Data
+
+* removed test set predictors containing NA's
+* removed train set predictors containing NA's
+* then removed predictors that were not in both the modified train and modified test sets 
+
+```{r}
+train_is_na <- sapply(X = names(train_data), FUN = function(x) as.logical(sum(is.na(train_data[,x]))))
+
+test_is_na <- sapply(X = names(test_data), FUN = function(x) as.logical(sum(is.na(test_data[,x]))))
+
+valid_train_features <- names(train_data)[-((1:153)[train_is_na])]
+
+valid_test_features <- names(test_data)[-((1:153)[test_is_na])]
+
+valid_features <- valid_test_features[valid_test_features %in% valid_train_features]
+
+Test <- test_data[names(test_data) %in% valid_features]
+
+target <- train_data$classe
+
+Train <-  cbind(train_data[names(train_data) %in% valid_features], target)
+```
+
+## Sanity Check and More: 
+
+* checked that the test and train sets had the same predictors 
+* set seed
+* imported caret and randomForest
+
+```{r}
+columns_match <- sum(names(Test) == (names(Train))[-length(names(Train))]) == length(names(Test))
+
+print(paste("the predictors match up: ",columns_match))
+
+set.seed(777)
+```
+```{r message = FALSE}
+library(caret)
+library(randomForest)
+```
+
+## Training and Cross-Validation
+
+1. 75/25 split the training set into training and validation sets
+2. trained a random forest model with 10 trees. (default 500 trees was taking too long)
+3. predicted validation set classes and calculated prediction accuracy
+4. did steps 1-3 three more times and then averaged the prediction accuracies.
+
+```{r}
+OOS_accuracy <- 0
+
+for(round in 1:4){
+  
+  # split the train_data into train and val
+  
+  inTrain = createDataPartition(Train$target, p = 3/4)[[1]]
+  
+  training = Train[ inTrain,]
+  
+  validating = Train[-inTrain,]
+  
+  number_predictions <- dim(validating)[1]
+  
+  answers <- validating$target
+
+  random_forest_MACHINE <- randomForest(target ~ ., data = training, ntree = 10)
+  
+  PROPHECY <- predict(random_forest_MACHINE, validating)
+  
+  OOS_accuracy <- OOS_accuracy + sum(PROPHECY == answers) / number_predictions
+}
+
+OOS_accuracy <- OOS_accuracy / 4
+
+print(paste("out of sample accuracy:",OOS_accuracy))
+```
+
+## Notes  
+* this code produces a 20/20 on the quiz
+* i chose random forest because I heard really good things about it
